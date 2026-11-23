@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mekong Sand Watch — Team Validation &amp; Labeling GUI</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #ffffff;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --green: #16a34a;
+      --red: #dc2626;
+      --amber: #d97706;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; height: 100vh; display: flex; flex-direction: column; color: #0f172a; background: #f1f5f9; }
+
+    /* Top Bar */
+    #topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; background: var(--bg); color: #f8fafc; border-bottom: 1px solid #1e293b;
+      gap: 12px; flex-wrap: wrap;
+    }
+    #topbar h1 { margin: 0; font-size: 15px; font-weight: 700; }
+    #topbar .sub { font-size: 12px; color: #94a3b8; }
+    .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      border: 1px solid #cbd5e1; background: #fff; color: #0f172a;
+      padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .btn:hover { background: #f8fafc; }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-dark { background: #1e293b; color: #f8fafc; border-color: #334155; }
+    .btn-dark:hover { background: #334155; }
+
+    /* Main 3-column layout */
+    #main { flex: 1; display: grid; grid-template-columns: 310px 1fr 360px; min-height: 0; }
+
+    /* Left Queue */
+    #queue-panel { background: #f8fafc; border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+    .panel-section { padding: 12px; border-bottom: 1px solid var(--border); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    label.field-label { display: block; font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+    select, input[type="text"], textarea {
+      width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-family: inherit; background: #fff;
+    }
+    .progress-wrap { margin-top: 8px; }
+    .progress-bar { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--green); width: 0%; transition: width 0.2s; }
+    .stats-row { display: flex; justify-content: space-between; font-size: 11px; color: #475569; margin-top: 5px; }
+    #queue-list { flex: 1; overflow-y: auto; padding: 8px; }
+    .q-item {
+      padding: 9px 10px; margin-bottom: 6px; background: #fff; border: 1px solid var(--border);
+      border-radius: 8px; cursor: pointer; font-size: 12px; transition: border-color 0.15s;
+    }
+    .q-item:hover { border-color: #93c5fd; }
+    .q-item.active { border-color: var(--accent); background: #eff6ff; box-shadow: 0 0 0 1px var(--accent); }
+    .q-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+    .pill { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; color: #fff; }
+    .pill-1 { background: var(--green); }
+    .pill-0 { background: var(--red); }
+    .pill-U { background: var(--amber); }
+    .pill-none { background: #94a3b8; }
+
+    /* Center Map */
+    #map-wrap { position: relative; min-height: 0; }
+    #map { width: 100%; height: 100%; }
+    #map-overlay {
+      position: absolute; top: 10px; right: 10px; z-index: 1000;
+      display: flex; gap: 6px; flex-wrap: wrap; background: rgba(255,255,255,0.95);
+      padding: 6px 8px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    /* Right Inspector */
+    #inspector { background: #fff; border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+    .kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; font-size: 12px; }
+    .kv-item span { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; }
+    .kv-item strong { font-size: 13px; }
+
+    .label-buttons { display: grid; gap: 8px; margin-top: 8px; }
+    .lbl-btn {
+      padding: 10px 12px; border-radius: 8px; border: 2px solid var(--border); background: #fff;
+      font-size: 13px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+      text-align: left;
+    }
+    .lbl-btn kbd { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-size: 11px; color: #475569; }
+    .lbl-btn.selected-1 { border-color: var(--green); background: #f0fdf4; color: #14532d; }
+    .lbl-btn.selected-0 { border-color: var(--red); background: #fef2f2; color: #7f1d1d; }
+    .lbl-btn.selected-U { border-color: var(--amber); background: #fffbeb; color: #78350f; }
+
+    .nav-row { display: flex; gap: 8px; margin-top: 10px; }
+    .nav-row .btn { flex: 1; justify-content: center; }
+
+    .codebook-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 11px; color: #334155; line-height: 1.45; }
+    .kbd-hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+    @media (max-width: 1024px) {
+      #main { grid-template-columns: 1fr; grid-template-rows: 220px 320px auto; }
+      #queue-panel, #inspector { border: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+  <div id="topbar">
+    <div>
+      <h1>Mekong Sand Watch — Optical Validation &amp; Labeling GUI</h1>
+      <div class="sub">Verify Sentinel-1 hotspots against optical imagery (Sentinel-2 / Google Earth / PlanetScope)</div>
+    </div>
+    <div class="top-actions">
+      <button class="btn btn-dark" id="exportCsvBtn">Export CSV</button>
+      <button class="btn btn-dark" id="exportJsonBtn">Export JSON</button>
+      <label class="btn btn-primary" style="margin:0;">
+        Merge Team JSON <input type="file" id="importJsonInput" accept=".json" multiple hidden />
+      </label>
+    </div>
+  </div>
+
+  <div id="main">
+    <!-- Left Queue -->
+    <div id="queue-panel">
+      <div class="panel-section">
+        <div class="grid-2">
+          <div>
+            <label class="field-label" for="annotatorSelect">Annotator</label>
+            <select id="annotatorSelect">
+              <option value="All">All Team (47)</option>
+              <option value="Tuna">Tuna</option>
+              <option value="Tomas">Tomas</option>
+              <option value="Lukas">Lukas</option>
+              <option value="Sangha">Sangha</option>
+              <option value="Hasan">Hasan</option>
+              <option value="Yudhajit">Yudhajit</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="statusFilter">Status</label>
+            <select id="statusFilter">
+              <option value="ALL">All</option>
+              <option value="UNLABELED">Unlabeled</option>
+              <option value="1">Confirmed (1)</option>
+              <option value="0">False Pos (0)</option>
+              <option value="U">Unclear (U)</option>
+            </select>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="stats-row">
+            <span id="progressText">0 / 0 labeled</span>
+            <span id="precisionText">Precision: —</span>
+          </div>
+        </div>
+      </div>
+      <div id="queue-list"></div>
+    </div>
+
+    <!-- Center Map -->
+    <div id="map-wrap">
+      <div id="map"></div>
+      <div id="map-overlay">
+        <a class="btn btn-primary" id="copernicusLink" href="#" target="_blank" rel="noopener">Copernicus Browser (S2)</a>
+        <a class="btn" id="googleEarthLink" href="#" target="_blank" rel="noopener">Google Earth</a>
+        <a class="btn" id="googleMapsLink" href="#" target="_blank" rel="noopener">Google Maps</a>
+      </div>
+    </div>
+
+    <!-- Right Inspector -->
+    <div id="inspector">
+      <div class="panel-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong id="objTitle" style="font-size:16px;">Select an object</strong>
+          <span id="objFlagPill" class="pill pill-none">—</span>
+        </div>
+        <div class="kv-grid" id="objMeta"></div>
+      </div>
+
+      <div class="panel-section">
+        <label class="field-label">Assign Label (Codebook)</label>
+        <div class="label-buttons">
+          <button class="lbl-btn" data-label="1">
+            <span>1 · Confirmed Vessel / Barge</span>
+            <kbd>1</kbd>
+          </button>
+          <button class="lbl-btn" data-label="0">
+            <span>0 · False Positive (not a vessel)</span>
+            <kbd>0</kbd>
+          </button>
+          <button class="lbl-btn" data-label="U">
+            <span>U · Unclear / Clouded</span>
+            <kbd>U</kbd>
+          </button>
+        </div>
+
+        <div id="fpReasonWrap" style="margin-top:10px;display:none;">
+          <label class="field-label" for="fpReason">False Positive Cause</label>
+          <select id="fpReason">
+            <option value="">— Select cause —</option>
+            <option value="Riverbank / sandbar">Riverbank / sandbar</option>
+            <option value="Bridge sidelobe">Bridge sidelobe</option>
+            <option value="Fixed structure / pier">Fixed structure / pier</option>
+            <option value="Empty water / noise">Empty water / noise</option>
+          </select>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label class="field-label" for="notesInput">Notes (optional)</label>
+          <textarea id="notesInput" rows="2" placeholder="e.g., Visible barge on Nov 10 Sentinel-2, or cloud cover..."></textarea>
+        </div>
+
+        <div class="nav-row">
+          <button class="btn" id="prevBtn">← Prev (P)</button>
+          <button class="btn btn-primary" id="nextBtn">Next (N) →</button>
+        </div>
+        <div class="kbd-hint">Shortcuts: <code>1</code> / <code>0</code> / <code>U</code> to label, <code>N</code> / <code>P</code> to navigate. Saves automatically in browser.</div>
+      </div>
+
+      <div class="panel-section">
+        <label class="field-label">Quick Codebook Guide</label>
+        <div class="codebook-box">
+          <strong>1 (Confirmed):</strong> Boat or barge visible at/near pin on closest cloud-free optical date.<br/>
+          <strong>0 (False Positive):</strong> Empty water, riverbank clutter, bridge sidelobe, or permanent structure.<br/>
+          <strong>U (Unclear):</strong> Heavy clouds or ambiguous at 10 m optical resolution.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="data.js"></script>
+  <script>
+    const TEAM = ["Tuna", "Tomas", "Lukas", "Sangha", "Hasan"];
+    const STORAGE_KEY = "msw_labels_v1";
+    const features = (window.OBJECTS_GEOJSON && window.OBJECTS_GEOJSON.features) || [];
+
+    // Deterministic split across 5 members + 5 shared overlap objects (O001..O005)
+    function getAssignees(idx) {
+      if (idx < 5) return ["Tuna", "Tomas"]; // shared overlap for inter-annotator agreement
+      return [TEAM[idx % TEAM.length]];
+    }
+    features.forEach((f, i) => { f.properties._assignees = getAssignees(i); });
+
+    let labels = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    let currentId = features[0]?.properties?.id || null;
+
+    // Map setup: Satellite + OSM
+    const satLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 19, attribution: "Esri World Imagery"
+    });
+    const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, attribution: "&copy; OpenStreetMap"
+    });
+    const map = L.map("map", { center: [17.875, 102.715], zoom: 13, layers: [satLayer] });
+    L.control.layers({ "Satellite (Esri)": satLayer, "OpenStreetMap": osmLayer }).addTo(map);
+
+    // Bridge & 1 km zone
+    L.polyline([[17.87481, 102.71598], [17.88544, 102.71426]], { color: "#facc15", weight: 3 }).addTo(map);
+    L.circle([17.880125, 102.71512], { radius: 1000, color: "#ef4444", weight: 1.5, dashArray: "6 4", fillOpacity: 0.05 }).addTo(map);
+
+    const markersLayer = L.layerGroup().addTo(map);
+    const markerById = {};
+
+    function saveLabels() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
+    }
+
+    function getFilteredFeatures() {
+      const who = document.getElementById("annotatorSelect").value;
+      const status = document.getElementById("statusFilter").value;
+      return features.filter(f => {
+        const p = f.properties;
+        if (who !== "All" && !p._assignees.includes(who) && who !== "Yudhajit") return false;
+        const rec = labels[p.id];
+        if (status === "UNLABELED" && rec?.label) return false;
+        if (["1", "0", "U"].includes(status) && rec?.label !== status) return false;
+        return true;
+      }).sort((a, b) => b.properties.score - a.properties.score);
+    }
+
+    function updateProgress() {
+      const who = document.getElementById("annotatorSelect").value;
+      const scope = features.filter(f => who === "All" || who === "Yudhajit" || f.properties._assignees.includes(who));
+      let done = 0, c1 = 0, c0 = 0;
+      scope.forEach(f => {
+        const l = labels[f.properties.id]?.label;
+        if (l) done++;
+        if (l === "1") c1++;
+        if (l === "0") c0++;
+      });
+      const pct = scope.length ? Math.round((done / scope.length) * 100) : 0;
+      document.getElementById("progressFill").style.width = `${pct}%`;
+      document.getElementById("progressText").textContent = `${done} / ${scope.length} labeled (${pct}%)`;
+      document.getElementById("precisionText").textContent = (c1 + c0) ? `Precision: ${Math.round((c1 / (c1 + c0)) * 100)}%` : "Precision: —";
+    }
+
+    function renderQueue() {
+      const listEl = document.getElementById("queue-list");
+      listEl.innerHTML = "";
+      markersLayer.clearLayers();
+
+      const filtered = getFilteredFeatures();
+      if (filtered.length && !filtered.some(f => f.properties.id === currentId)) {
+        currentId = filtered[0].properties.id;
+      }
+
+      filtered.forEach(f => {
+        const p = f.properties;
+        const [lon, lat] = f.geometry.coordinates;
+        const rec = labels[p.id];
+        const lbl = rec?.label || "";
+        const pillClass = lbl ? `pill-${lbl}` : "pill-none";
+        const pillText = lbl === "1" ? "Confirmed" : lbl === "0" ? "False Pos" : lbl === "U" ? "Unclear" : "Unlabeled";
+        const color = lbl === "1" ? "#16a34a" : lbl === "0" ? "#dc2626" : lbl === "U" ? "#d97706" : "#38bdf8";
+
+        const marker = L.circleMarker([lat, lon], {
+          radius: p.id === currentId ? 9 : 6,
+          color: p.id === currentId ? "#facc15" : "#fff",
+          weight: p.id === currentId ? 2.5 : 1.5,
+          fillColor: color,
+          fillOpacity: 0.9
+        }).addTo(markersLayer);
+        marker.on("click", () => selectObject(p.id, true));
+        markerById[p.id] = marker;
+
+        const div = document.createElement("div");
+        div.className = `q-item ${p.id === currentId ? "active" : ""}`;
+        div.innerHTML = `
+          <div class="q-top">
+            <strong>${p.id} · ${p.score.toFixed(2)}</strong>
+            <span class="pill ${pillClass}">${pillText}</span>
+          </div>
+          <div style="color:#475569;">${p.flag} · ${p.passes_present}/${p.passes_observed} passes</div>
+          <div style="color:#94a3b8;font-size:11px;">Assignee: ${p._assignees.join(", ")}</div>
+        `;
+        div.onclick = () => selectObject(p.id, true);
+        listEl.appendChild(div);
+      });
+
+      updateProgress();
+      renderInspector();
+    }
+
+    function renderInspector() {
+      const f = features.find(x => x.properties.id === currentId);
+      if (!f) return;
+      const p = f.properties;
+      const [lon, lat] = f.geometry.coordinates;
+      const rec = labels[p.id] || {};
+
+      document.getElementById("objTitle").textContent = `${p.id} (Score ${p.score.toFixed(2)})`;
+      const pill = document.getElementById("objFlagPill");
+      pill.textContent = p.flag;
+      pill.className = `pill ${rec.label ? "pill-" + rec.label : "pill-none"}`;
+
+      document.getElementById("objMeta").innerHTML = `
+        <div class="kv-item"><span>Passes</span><strong>${p.passes_present} / ${p.passes_observed}</strong></div>
+        <div class="kv-item"><span>Date Range</span><strong>${p.first_seen} → ${p.last_seen}</strong></div>
+        <div class="kv-item"><span>Bridge Dist</span><strong>${p.dist_to_bridge_m} m</strong></div>
+        <div class="kv-item"><span>Bank Dist</span><strong>${p.dist_to_bank_m} m</strong></div>
+        <div class="kv-item"><span>Peak VV</span><strong>${p.peak_vv_db} dB</strong></div>
+        <div class="kv-item"><span>Est. Length</span><strong>${p.length_m} m</strong></div>
+        <div class="kv-item" style="grid-column:span 2;"><span>Dates Seen</span><strong>${p.dates_present}</strong></div>
+      `;
+
+      // External optical verification links
+      document.getElementById("copernicusLink").href =
+        `https://browser.dataspace.copernicus.eu/?zoom=15&lat=${lat}&lng=${lon}&datasetId=S2_L2A_CDAS&fromTime=${p.first_seen}T00:00:00.000Z&toTime=${p.last_seen}T23:59:59.999Z`;
+      document.getElementById("googleEarthLink").href =
+        `https://earth.google.com/web/@${lat},${lon},180a,1200d,35y,0h,0t,0r`;
+      document.getElementById("googleMapsLink").href =
+        `https://www.google.com/maps/@?api=1&map_action=map&center=${lat},${lon}&zoom=17&basemap=satellite`;
+
+      document.querySelectorAll(".lbl-btn").forEach(btn => {
+        const l = btn.dataset.label;
+        btn.className = "lbl-btn" + (rec.label === l ? ` selected-${l}` : "");
+      });
+      document.getElementById("fpReasonWrap").style.display = rec.label === "0" ? "block" : "none";
+      document.getElementById("fpReason").value = rec.fp_reason || "";
+      document.getElementById("notesInput").value = rec.notes || "";
+    }
+
+    function selectObject(id, panMap = false) {
+      currentId = id;
+      const f = features.find(x => x.properties.id === id);
+      if (f && panMap) {
+        const [lon, lat] = f.geometry.coordinates;
+        map.setView([lat, lon], 16);
+      }
+      renderQueue();
+    }
+
+    function setLabel(lbl) {
+      if (!currentId) return;
+      const who = document.getElementById("annotatorSelect").value;
+      const prev = labels[currentId] || {};
+      labels[currentId] = {
+        ...prev,
+        label: lbl,
+        annotator: who === "All" ? "Team" : who,
+        fp_reason: lbl === "0" ? (document.getElementById("fpReason").value || prev.fp_reason || "") : "",
+        notes: document.getElementById("notesInput").value || "",
+        labeled_at: new Date().toISOString()
+      };
+      saveLabels();
+      renderQueue();
+    }
+
+    function step(delta) {
+      const filtered = getFilteredFeatures();
+      if (!filtered.length) return;
+      const idx = filtered.findIndex(f => f.properties.id === currentId);
+      const nextIdx = (idx + delta + filtered.length) % filtered.length;
+      selectObject(filtered[nextIdx].properties.id, true);
+    }
+
+    document.querySelectorAll(".lbl-btn").forEach(b => b.onclick = () => setLabel(b.dataset.label));
+    document.getElementById("fpReason").onchange = () => {
+      if (currentId && labels[currentId]) {
+        labels[currentId].fp_reason = document.getElementById("fpReason").value;
+        saveLabels();
+      }
+    };
+    document.getElementById("notesInput").oninput = () => {
+      if (currentId) {
+        labels[currentId] = { ...(labels[currentId] || {}), notes: document.getElementById("notesInput").value };
+        saveLabels();
+      }
+    };
+    document.getElementById("prevBtn").onclick = () => step(-1);
+    document.getElementById("nextBtn").onclick = () => step(1);
+    document.getElementById("annotatorSelect").onchange = renderQueue;
+    document.getElementById("statusFilter").onchange = renderQueue;
+
+    // Keyboard shortcuts
+    document.addEventListener("keydown", e => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+      if (e.key === "1" || e.key === "0") setLabel(e.key);
+      else if (e.key.toLowerCase() === "u") setLabel("U");
+      else if (e.key.toLowerCase() === "n" || e.key === "ArrowRight") step(1);
+      else if (e.key.toLowerCase() === "p" || e.key === "ArrowLeft") step(-1);
+    });
+
+    // Export CSV / JSON & Merge
+    function download(filename, text, type) {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([text], { type }));
+      a.download = filename;
+      a.click();
+    }
+    document.getElementById("exportJsonBtn").onclick = () => {
+      const who = document.getElementById("annotatorSelect").value.toLowerCase();
+      download(`msw_labels_${who}.json`, JSON.stringify(labels, null, 2), "application/json");
+    };
+    document.getElementById("exportCsvBtn").onclick = () => {
+      const rows = [["id", "flag", "score", "lat", "lon", "label", "fp_reason", "annotator", "notes", "labeled_at"]];
+      features.forEach(f => {
+        const p = f.properties, [lon, lat] = f.geometry.coordinates, r = labels[p.id] || {};
+        rows.push([p.id, `"${p.flag}"`, p.score, lat, lon, r.label || "", `"${r.fp_reason || ""}"`, r.annotator || "", `"${(r.notes || "").replace(/"/g, '""')}"`, r.labeled_at || ""]);
+      });
+      download("msw_validated_objects.csv", rows.map(r => r.join(",")).join("\n"), "text/csv");
+    };
+    document.getElementById("importJsonInput").onchange = async (e) => {
+      for (const file of e.target.files) {
+        const data = JSON.parse(await file.text());
+        labels = { ...labels, ...data };
+      }
+      saveLabels();
+      renderQueue();
+      alert("Merged team labels!");
+    };
+
+    renderQueue();
+    if (currentId) selectObject(currentId, true);
+  </script>
+</body>
+</html>
