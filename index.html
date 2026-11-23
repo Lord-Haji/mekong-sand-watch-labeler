@@ -113,6 +113,8 @@
       <div class="sub">Verify Sentinel-1 hotspots against optical imagery (Sentinel-2 / Google Earth / PlanetScope)</div>
     </div>
     <div class="top-actions">
+      <span id="syncStatus" class="pill pill-none" style="font-size:11px;padding:4px 8px;">Local only</span>
+      <button class="btn btn-dark" id="syncConfigBtn">Sheet Sync URL</button>
       <button class="btn btn-dark" id="exportCsvBtn">Export CSV</button>
       <button class="btn btn-dark" id="exportJsonBtn">Export JSON</button>
       <label class="btn btn-primary" style="margin:0;">
@@ -236,6 +238,12 @@
   <script>
     const TEAM = ["Tuna", "Tomas", "Lukas", "Sangha", "Hasan"];
     const STORAGE_KEY = "msw_labels_v1";
+    const SYNC_KEY = "msw_sync_url_v1";
+    const DEFAULT_SYNC_URL = "";
+    const urlApi = new URLSearchParams(window.location.search).get("api");
+    if (urlApi) localStorage.setItem(SYNC_KEY, urlApi);
+    let syncUrl = localStorage.getItem(SYNC_KEY) || DEFAULT_SYNC_URL;
+
     const features = (window.OBJECTS_GEOJSON && window.OBJECTS_GEOJSON.features) || [];
 
     // Deterministic split across 5 members + 5 shared overlap objects (O001..O005)
@@ -264,6 +272,58 @@
 
     const markersLayer = L.layerGroup().addTo(map);
     const markerById = {};
+
+    function updateSyncBadge(text, cls) {
+      const el = document.getElementById("syncStatus");
+      el.textContent = text;
+      el.className = `pill ${cls}`;
+    }
+
+    async function pullFromSheet() {
+      if (!syncUrl) { updateSyncBadge("Local only", "pill-none"); return; }
+      try {
+        updateSyncBadge("Syncing...", "pill-U");
+        const res = await fetch(syncUrl);
+        const rows = await res.json();
+        if (Array.isArray(rows)) {
+          rows.forEach(r => {
+            if (r.id && r.label) labels[r.id] = r;
+          });
+          saveLabels();
+          renderQueue();
+        }
+        updateSyncBadge("Sheet Synced ✓", "pill-1");
+      } catch (err) {
+        updateSyncBadge("Sync Error", "pill-0");
+      }
+    }
+
+    async function pushRowToSheet(id) {
+      if (!syncUrl || !id || !labels[id]) return;
+      const f = features.find(x => x.properties.id === id);
+      if (!f) return;
+      const p = f.properties, [lon, lat] = f.geometry.coordinates, r = labels[id];
+      const payload = {
+        id, flag: p.flag, score: p.score, lat, lon,
+        label: r.label || "", fp_reason: r.fp_reason || "",
+        annotator: r.annotator || "", notes: r.notes || "", labeled_at: r.labeled_at || ""
+      };
+      try {
+        updateSyncBadge("Saving...", "pill-U");
+        await fetch(syncUrl, { method: "POST", body: JSON.stringify(payload) });
+        updateSyncBadge("Sheet Synced ✓", "pill-1");
+      } catch (err) {
+        updateSyncBadge("Sync Error", "pill-0");
+      }
+    }
+
+    document.getElementById("syncConfigBtn").onclick = () => {
+      const val = prompt("Paste Google Apps Script Web App URL (leave blank for local only):", syncUrl);
+      if (val === null) return;
+      syncUrl = val.trim();
+      localStorage.setItem(SYNC_KEY, syncUrl);
+      pullFromSheet();
+    };
 
     function saveLabels() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
@@ -407,6 +467,7 @@
         labeled_at: new Date().toISOString()
       };
       saveLabels();
+      pushRowToSheet(currentId);
       renderQueue();
     }
 
@@ -476,6 +537,7 @@
 
     renderQueue();
     if (currentId) selectObject(currentId, true);
+    pullFromSheet();
   </script>
 </body>
 </html>
