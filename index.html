@@ -15,6 +15,10 @@
       --green: #16a34a;
       --red: #dc2626;
       --amber: #d97706;
+      --orange: #f97316;
+      --purple: #a855f7;
+      --sky: #38bdf8;
+      --slate: #94a3b8;
     }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; height: 100vh; display: flex; flex-direction: column; color: #0f172a; background: #f1f5f9; }
@@ -36,11 +40,31 @@
     .btn:hover { background: #f8fafc; }
     .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
     .btn-primary:hover { background: #1d4ed8; }
+    .btn-planet { background: #0d9488; color: #fff; border-color: #0d9488; }
+    .btn-planet:hover { background: #0f766e; }
     .btn-dark { background: #1e293b; color: #f8fafc; border-color: #334155; }
     .btn-dark:hover { background: #334155; }
 
+    /* Dismissible 3-Step Onboarding Banner */
+    #onboarding-banner {
+      background: #eff6ff; border-bottom: 1px solid #bfdbfe; padding: 8px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: #1e3a8a;
+    }
+    #onboarding-banner.hidden { display: none; }
+    .steps-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .step-chip { display: inline-flex; align-items: center; gap: 6px; line-height: 1.35; }
+    .step-num {
+      background: #2563eb; color: #fff; font-weight: 700; font-size: 11px;
+      width: 18px; height: 18px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .banner-close {
+      background: transparent; border: 1px solid #93c5fd; color: #1e40af; border-radius: 6px;
+      padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+    }
+    .banner-close:hover { background: #dbeafe; }
+
     /* Main 3-column layout */
-    #main { flex: 1; display: grid; grid-template-columns: 310px 1fr 360px; min-height: 0; }
+    #main { flex: 1; display: grid; grid-template-columns: 320px 1fr 380px; min-height: 0; }
 
     /* Left Queue */
     #queue-panel { background: #f8fafc; border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
@@ -50,6 +74,15 @@
     select, input[type="text"], textarea {
       width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-family: inherit; background: #fff;
     }
+
+    /* Queue Scope Toggle */
+    .scope-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 8px; background: #e2e8f0; padding: 3px; border-radius: 7px; }
+    .scope-tab {
+      border: none; background: transparent; padding: 5px 4px; border-radius: 5px;
+      font-size: 11px; font-weight: 700; color: #475569; cursor: pointer; text-align: center;
+    }
+    .scope-tab.active { background: #fff; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+
     .progress-wrap { margin-top: 8px; }
     .progress-bar { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
     .progress-fill { height: 100%; background: var(--green); width: 0%; transition: width 0.2s; }
@@ -62,6 +95,7 @@
     .q-item:hover { border-color: #93c5fd; }
     .q-item.active { border-color: var(--accent); background: #eff6ff; box-shadow: 0 0 0 1px var(--accent); }
     .q-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+    .q-cat-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
     .pill { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; color: #fff; }
     .pill-1 { background: var(--green); }
     .pill-0 { background: var(--red); }
@@ -77,13 +111,52 @@
       padding: 6px 8px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 
+    /* On-Map Legend (bottom-left) */
+    #map-legend {
+      position: absolute; bottom: 20px; left: 10px; z-index: 1000;
+      background: rgba(255, 255, 255, 0.96); border: 1px solid #cbd5e1;
+      border-radius: 8px; padding: 10px 12px; width: 290px; max-width: calc(100% - 20px);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.18); font-size: 11.5px; color: #1e293b;
+    }
+    .legend-header {
+      display: flex; justify-content: space-between; align-items: center;
+      font-weight: 700; font-size: 12px; cursor: pointer; user-select: none;
+    }
+    .legend-body { margin-top: 8px; display: grid; gap: 5px; }
+    #map-legend.collapsed .legend-body { display: none; }
+    .legend-row { display: flex; align-items: center; gap: 8px; line-height: 1.3; }
+    .legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.2); }
+    .legend-line-yellow { width: 14px; height: 3px; background: #facc15; flex-shrink: 0; }
+    .legend-circle-red { width: 12px; height: 12px; border-radius: 50%; border: 2px dashed #ef4444; background: rgba(239,68,68,0.08); flex-shrink: 0; }
+    .legend-divider { border-top: 1px solid #e2e8f0; margin: 3px 0; }
+    .legend-note { font-size: 10.5px; color: #475569; background: #f8fafc; padding: 5px 7px; border-radius: 5px; border: 1px solid #e2e8f0; line-height: 1.35; }
+
     /* Right Inspector */
     #inspector { background: #fff; border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+    .evidence-box {
+      background: #fff7ed; border: 1px solid #fed7aa; color: #7c2d12;
+      padding: 9px 10px; border-radius: 8px; font-size: 12px; line-height: 1.45; margin-bottom: 10px;
+    }
+    .evidence-box.cat-zone { background: #faf5ff; border-color: #e9d5ff; color: #581c87; }
+    .evidence-box.cat-passing { background: #f0f9ff; border-color: #bae6fd; color: #0c4a6e; }
+    .evidence-box.cat-fixed { background: #f8fafc; border-color: #cbd5e1; color: #334155; }
+
     .kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; font-size: 12px; }
     .kv-item span { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; }
     .kv-item strong { font-size: 13px; }
 
-    .label-buttons { display: grid; gap: 8px; margin-top: 8px; }
+    .optical-box {
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px;
+    }
+    .dates-banner {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+      background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; margin-bottom: 8px; font-size: 11.5px;
+    }
+    .optical-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .optical-grid .btn { justify-content: center; text-align: center; }
+    .optical-hint { font-size: 10.5px; color: var(--muted); margin-top: 6px; line-height: 1.35; }
+
+    .label-buttons { display: grid; gap: 8px; margin-top: 6px; }
     .lbl-btn {
       padding: 10px 12px; border-radius: 8px; border: 2px solid var(--border); background: #fff;
       font-size: 13px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
@@ -101,7 +174,7 @@
     .kbd-hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
 
     @media (max-width: 1024px) {
-      #main { grid-template-columns: 1fr; grid-template-rows: 220px 320px auto; }
+      #main { grid-template-columns: 1fr; grid-template-rows: 240px 360px auto; }
       #queue-panel, #inspector { border: none; border-bottom: 1px solid var(--border); }
     }
   </style>
@@ -110,9 +183,10 @@
   <div id="topbar">
     <div>
       <h1>Mekong Sand Watch — Optical Validation &amp; Labeling GUI</h1>
-      <div class="sub">Verify Sentinel-1 hotspots against optical imagery (Sentinel-2 / Google Earth / PlanetScope)</div>
+      <div class="sub">Verify Sentinel-1 radar detections against optical satellite imagery (PlanetScope / Sentinel-2 / Google Earth)</div>
     </div>
     <div class="top-actions">
+      <button class="btn btn-dark" id="toggleGuideBtn" title="Show/hide 3-step guide">? 3-Step Guide</button>
       <span id="syncStatus" class="pill pill-none" style="font-size:11px;padding:4px 8px;">Local only</span>
       <button class="btn btn-dark" id="syncConfigBtn">Sheet Sync URL</button>
       <button class="btn btn-dark" id="exportCsvBtn">Export CSV</button>
@@ -121,6 +195,25 @@
         Merge Team JSON <input type="file" id="importJsonInput" accept=".json" multiple hidden />
       </label>
     </div>
+  </div>
+
+  <!-- Dismissible 3-Step Workflow Banner -->
+  <div id="onboarding-banner">
+    <div class="steps-row">
+      <div class="step-chip">
+        <span class="step-num">1</span>
+        <span><strong>Pick a radar target:</strong> Start with the orange <strong>Stationary Hotspots (O007–O009)</strong>. Each dot is a bright Sentinel-1 radar reflection.</span>
+      </div>
+      <div class="step-chip">
+        <span class="step-num">2</span>
+        <span><strong>Open optical view on that date:</strong> Click <strong>PlanetScope (3m)</strong>, <strong>Copernicus (10m S2)</strong>, or <strong>Google Earth</strong> to inspect the river on the radar dates.</span>
+      </div>
+      <div class="step-chip">
+        <span class="step-num">3</span>
+        <span><strong>Label what you see:</strong> Press <strong>1</strong> Confirmed vessel/barge, <strong>0</strong> False positive, or <strong>U</strong> Unclear/clouded, then <strong>N</strong> for Next.</span>
+      </div>
+    </div>
+    <button class="banner-close" id="dismissBannerBtn">Got it ✕</button>
   </div>
 
   <div id="main">
@@ -151,6 +244,13 @@
             </select>
           </div>
         </div>
+
+        <div class="scope-tabs" role="tablist" aria-label="Queue priority filter">
+          <button class="scope-tab active" data-scope="PRIORITY" id="scopePriorityBtn" title="Stationary hotspots + Inside 1 km bridge zone">Priority (9)</button>
+          <button class="scope-tab" data-scope="HOTSPOTS" id="scopeHotspotsBtn" title="Multi-pass stationary hotspots only (O007-O009)">Hotspots (3)</button>
+          <button class="scope-tab" data-scope="ALL" id="scopeAllBtn" title="All 47 radar detections including 1-pass passing boats">All (47)</button>
+        </div>
+
         <div class="progress-wrap">
           <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
           <div class="stats-row">
@@ -166,24 +266,94 @@
     <div id="map-wrap">
       <div id="map"></div>
       <div id="map-overlay">
-        <a class="btn btn-primary" id="copernicusLink" href="#" target="_blank" rel="noopener">Copernicus Browser (S2)</a>
-        <a class="btn" id="googleEarthLink" href="#" target="_blank" rel="noopener">Google Earth</a>
-        <a class="btn" id="googleMapsLink" href="#" target="_blank" rel="noopener">Google Maps</a>
+        <a class="btn btn-planet" id="planetLinkTop" href="#" target="_blank" rel="noopener" title="Open Planet Explorer (3m daily optical) at this coordinate">PlanetScope (3m)</a>
+        <a class="btn btn-primary" id="copernicusLinkTop" href="#" target="_blank" rel="noopener" title="Open Copernicus Browser (Sentinel-2 10m optical) around radar dates">Copernicus (S2)</a>
+        <a class="btn" id="googleEarthLinkTop" href="#" target="_blank" rel="noopener">Google Earth</a>
+        <a class="btn" id="googleMapsLinkTop" href="#" target="_blank" rel="noopener">Google Maps</a>
+      </div>
+
+      <!-- On-Map Legend -->
+      <div id="map-legend">
+        <div class="legend-header" id="legendToggle">
+          <span>Map Legend &amp; Detection Categories</span>
+          <span id="legendChevron">▾</span>
+        </div>
+        <div class="legend-body">
+          <div class="legend-row">
+            <span class="legend-dot" style="background:#f97316;width:13px;height:13px;"></span>
+            <span><strong>Stationary Hotspot (3)</strong> — 4–5 of 6 passes (check first!)</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="background:#a855f7;"></span>
+            <span><strong>Inside 1 km Bridge Zone (6)</strong> — 1 pass inside restricted zone</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="background:#38bdf8;"></span>
+            <span><strong>Passing / Low-Persistence (35)</strong> — 1–2 passes outside zone</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="background:#94a3b8;"></span>
+            <span><strong>Fixed Structure (3)</strong> — very close to riverbank/pier</span>
+          </div>
+          <div class="legend-divider"></div>
+          <div class="legend-row">
+            <span class="legend-line-yellow"></span>
+            <span><strong>Yellow Line:</strong> Thai–Lao Friendship Bridge</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-circle-red"></span>
+            <span><strong>Red Dashed Circle:</strong> 1 km Bridge No-Mining Zone</span>
+          </div>
+          <div class="legend-row" style="font-size:10.5px;color:#475569;">
+            <span><strong>Ring Outline:</strong> <span style="color:#eab308;font-weight:700;">● Selected</span> · <span style="color:#16a34a;font-weight:700;">● Confirmed</span> · <span style="color:#dc2626;font-weight:700;">● False Pos</span> · <span style="color:#d97706;font-weight:700;">● Unclear</span></span>
+          </div>
+          <div class="legend-note">
+            <strong>Why don't I see a boat right here?</strong> This background satellite photo is an older Esri reference basemap. Use the <strong>Step 2 Optical buttons</strong> to check imagery from the actual radar dates.
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Right Inspector -->
     <div id="inspector">
+      <!-- Step 1: Target & Plain-English Radar Evidence -->
       <div class="panel-section">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <strong id="objTitle" style="font-size:16px;">Select an object</strong>
           <span id="objFlagPill" class="pill pill-none">—</span>
+        </div>
+        <div id="plainEnglishEvidence" class="evidence-box">
+          Select a radar detection from the queue or map to see why it was flagged.
         </div>
         <div class="kv-grid" id="objMeta"></div>
       </div>
 
+      <!-- Step 2: Optical Imagery Verification -->
       <div class="panel-section">
-        <label class="field-label">Assign Label (Codebook)</label>
+        <label class="field-label">Step 2 · Verify on Optical Imagery</label>
+        <div class="optical-box">
+          <div class="dates-banner">
+            <div>
+              <span style="color:#64748b;font-size:10px;text-transform:uppercase;display:block;">Radar Dates Seen</span>
+              <strong id="opticalDatesText" style="color:#0f172a;">—</strong>
+            </div>
+            <button class="btn" id="copyCoordsBtn" style="padding:4px 8px;font-size:11px;" title="Copy coordinates and radar dates to clipboard">Copy Coords &amp; Dates</button>
+          </div>
+          <div class="optical-grid">
+            <a class="btn btn-planet" id="planetLink" href="#" target="_blank" rel="noopener">PlanetScope (3m)</a>
+            <a class="btn btn-primary" id="copernicusLink" href="#" target="_blank" rel="noopener">Copernicus (10m S2)</a>
+            <a class="btn" id="googleEarthLink" href="#" target="_blank" rel="noopener">Google Earth</a>
+            <a class="btn" id="googleMapsLink" href="#" target="_blank" rel="noopener">Google Maps</a>
+          </div>
+          <div class="optical-hint">
+            <strong>PlanetScope:</strong> 3 m daily imagery (set Planet Explorer date filter to the radar dates above). <strong>Copernicus:</strong> Opens Sentinel-2 (±3 days window).
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Assign Label -->
+      <div class="panel-section">
+        <label class="field-label">Step 3 · Assign Validation Label</label>
         <div class="label-buttons">
           <button class="lbl-btn" data-label="1">
             <span>1 · Confirmed Vessel / Barge</span>
@@ -212,7 +382,7 @@
 
         <div style="margin-top:10px;">
           <label class="field-label" for="notesInput">Notes (optional)</label>
-          <textarea id="notesInput" rows="2" placeholder="e.g., Visible barge on Nov 10 Sentinel-2, or cloud cover..."></textarea>
+          <textarea id="notesInput" rows="2" placeholder="e.g., Visible barge on Nov 10 Sentinel-2 / PlanetScope, or cloud cover..."></textarea>
         </div>
 
         <div class="nav-row">
@@ -239,12 +409,36 @@
     const TEAM = ["Tuna", "Tomas", "Lukas", "Sangha", "Hasan"];
     const STORAGE_KEY = "msw_labels_v1";
     const SYNC_KEY = "msw_sync_url_v1";
+    const ONBOARDING_KEY = "msw_onboarding_v1";
     const DEFAULT_SYNC_URL = "";
     const urlApi = new URLSearchParams(window.location.search).get("api");
     if (urlApi) localStorage.setItem(SYNC_KEY, urlApi);
     let syncUrl = localStorage.getItem(SYNC_KEY) || DEFAULT_SYNC_URL;
 
     const features = (window.OBJECTS_GEOJSON && window.OBJECTS_GEOJSON.features) || [];
+
+    // Onboarding banner state
+    const bannerEl = document.getElementById("onboarding-banner");
+    if (localStorage.getItem(ONBOARDING_KEY) === "dismissed") {
+      bannerEl.classList.add("hidden");
+    }
+    document.getElementById("dismissBannerBtn").onclick = () => {
+      bannerEl.classList.add("hidden");
+      localStorage.setItem(ONBOARDING_KEY, "dismissed");
+      map.invalidateSize();
+    };
+    document.getElementById("toggleGuideBtn").onclick = () => {
+      const isHidden = bannerEl.classList.toggle("hidden");
+      localStorage.setItem(ONBOARDING_KEY, isHidden ? "dismissed" : "shown");
+      map.invalidateSize();
+    };
+
+    // Legend collapse toggle
+    document.getElementById("legendToggle").onclick = () => {
+      const leg = document.getElementById("map-legend");
+      const collapsed = leg.classList.toggle("collapsed");
+      document.getElementById("legendChevron").textContent = collapsed ? "▸" : "▾";
+    };
 
     // Deterministic split across 5 members + 5 shared overlap objects (O001..O005)
     function getAssignees(idx) {
@@ -253,22 +447,87 @@
     }
     features.forEach((f, i) => { f.properties._assignees = getAssignees(i); });
 
+    // Category styling & priority tier helper
+    function getCategoryMeta(p) {
+      const flag = (p.flag || "").toLowerCase();
+      if (flag.includes("stationary") || flag === "suspicious" || flag === "check" || p.passes_present >= 3) {
+        return {
+          tier: 0,
+          color: "#f97316", // Orange
+          radius: 8,
+          shortLabel: "Stationary Hotspot",
+          boxClass: ""
+        };
+      }
+      if (flag.includes("in zone") || p.in_zone) {
+        return {
+          tier: 1,
+          color: "#a855f7", // Purple
+          radius: 6.5,
+          shortLabel: "Inside 1 km Bridge Zone",
+          boxClass: "cat-zone"
+        };
+      }
+      if (flag.includes("fixed")) {
+        return {
+          tier: 3,
+          color: "#94a3b8", // Slate Gray
+          radius: 5.5,
+          shortLabel: "Likely Fixed Structure",
+          boxClass: "cat-fixed"
+        };
+      }
+      return {
+        tier: 2,
+        color: "#38bdf8", // Sky Blue
+        radius: 5.5,
+        shortLabel: "Passing / Low-Persistence",
+        boxClass: "cat-passing"
+      };
+    }
+
+    function getPlainEnglishEvidence(p) {
+      const flag = (p.flag || "").toLowerCase();
+      if (p.passes_present >= 3 || flag.includes("stationary")) {
+        return `<strong>Likely anchored / stationary hotspot:</strong> Seen at this exact mid-river spot on <strong>${p.passes_present} of ${p.passes_observed} radar passes</strong> (${p.first_seen} → ${p.last_seen}), ~${p.length_m} m long, ${p.dist_to_bank_m} m from bank. High priority — check optical imagery.`;
+      }
+      if (p.in_zone || flag.includes("in zone")) {
+        return `<strong>Inside 1 km bridge no-mining zone:</strong> Seen on <strong>${p.passes_present} of ${p.passes_observed} radar passes</strong> (${p.dates_present}), only <strong>${p.dist_to_bridge_m} m from the bridge</strong> (~${p.length_m} m long). Check if passing boat or stationary dredging inside restricted zone.`;
+      }
+      if (flag.includes("fixed")) {
+        return `<strong>Likely fixed structure:</strong> Only <strong>${p.dist_to_bank_m} m from the riverbank</strong> (seen on ${p.passes_present} of ${p.passes_observed} passes, ${p.dates_present}). Check optical view to confirm if pier, dock, or moored structure.`;
+      }
+      return `<strong>Likely passing boat:</strong> Seen on <strong>${p.passes_present} of ${p.passes_observed} radar passes</strong> (${p.dates_present}), ${p.dist_to_bridge_m} m from bridge and ${p.dist_to_bank_m} m from bank. Low persistence.`;
+    }
+
+    function padIsoDate(dateStr, deltaDays) {
+      const d = new Date(dateStr + "T00:00:00Z");
+      if (isNaN(d.getTime())) return dateStr;
+      d.setUTCDate(d.getUTCDate() + deltaDays);
+      return d.toISOString().slice(0, 10);
+    }
+
     let labels = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    let currentId = features[0]?.properties?.id || null;
+    let queueScope = "PRIORITY"; // PRIORITY (9) | HOTSPOTS (3) | ALL (47)
+    let currentId = null;
 
     // Map setup: Satellite + OSM
     const satLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-      maxZoom: 19, attribution: "Esri World Imagery"
+      maxZoom: 19, attribution: "Esri World Imagery (Reference Basemap)"
     });
     const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, attribution: "&copy; OpenStreetMap"
     });
     const map = L.map("map", { center: [17.875, 102.715], zoom: 13, layers: [satLayer] });
-    L.control.layers({ "Satellite (Esri)": satLayer, "OpenStreetMap": osmLayer }).addTo(map);
+    L.control.layers({ "Satellite (Esri Reference)": satLayer, "OpenStreetMap": osmLayer }).addTo(map);
 
-    // Bridge & 1 km zone
-    L.polyline([[17.87481, 102.71598], [17.88544, 102.71426]], { color: "#facc15", weight: 3 }).addTo(map);
-    L.circle([17.880125, 102.71512], { radius: 1000, color: "#ef4444", weight: 1.5, dashArray: "6 4", fillOpacity: 0.05 }).addTo(map);
+    // Bridge & 1 km zone with tooltips
+    L.polyline([[17.87481, 102.71598], [17.88544, 102.71426]], { color: "#facc15", weight: 4 })
+      .bindTooltip("<strong>Thai–Lao Friendship Bridge</strong><br/>Reference infrastructure landmark", { sticky: true })
+      .addTo(map);
+    L.circle([17.880125, 102.71512], { radius: 1000, color: "#ef4444", weight: 1.8, dashArray: "6 4", fillOpacity: 0.04 })
+      .bindTooltip("<strong>1 km Bridge No-Mining Buffer Zone</strong><br/>Dredging near bridge piers risks scour &amp; structural damage", { sticky: true })
+      .addTo(map);
 
     const markersLayer = L.layerGroup().addTo(map);
     const markerById = {};
@@ -329,22 +588,48 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
     }
 
+    function setQueueScope(scope) {
+      queueScope = scope;
+      document.querySelectorAll(".scope-tab").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.scope === scope);
+      });
+      renderQueue();
+    }
+    document.querySelectorAll(".scope-tab").forEach(btn => {
+      btn.onclick = () => setQueueScope(btn.dataset.scope);
+    });
+
     function getFilteredFeatures() {
       const who = document.getElementById("annotatorSelect").value;
       const status = document.getElementById("statusFilter").value;
       return features.filter(f => {
         const p = f.properties;
+        const cat = getCategoryMeta(p);
         if (who !== "All" && !p._assignees.includes(who) && who !== "Yudhajit") return false;
+        if (queueScope === "HOTSPOTS" && cat.tier !== 0) return false;
+        if (queueScope === "PRIORITY" && cat.tier > 1) return false;
         const rec = labels[p.id];
         if (status === "UNLABELED" && rec?.label) return false;
         if (["1", "0", "U"].includes(status) && rec?.label !== status) return false;
         return true;
-      }).sort((a, b) => b.properties.score - a.properties.score);
+      }).sort((a, b) => {
+        const tierA = getCategoryMeta(a.properties).tier;
+        const tierB = getCategoryMeta(b.properties).tier;
+        if (tierA !== tierB) return tierA - tierB;
+        return b.properties.score - a.properties.score;
+      });
     }
 
     function updateProgress() {
       const who = document.getElementById("annotatorSelect").value;
-      const scope = features.filter(f => who === "All" || who === "Yudhajit" || f.properties._assignees.includes(who));
+      const scope = features.filter(f => {
+        const p = f.properties;
+        const cat = getCategoryMeta(p);
+        if (who !== "All" && who !== "Yudhajit" && !p._assignees.includes(who)) return false;
+        if (queueScope === "HOTSPOTS" && cat.tier !== 0) return false;
+        if (queueScope === "PRIORITY" && cat.tier > 1) return false;
+        return true;
+      });
       let done = 0, c1 = 0, c0 = 0;
       scope.forEach(f => {
         const l = labels[f.properties.id]?.label;
@@ -373,29 +658,41 @@
         const [lon, lat] = f.geometry.coordinates;
         const rec = labels[p.id];
         const lbl = rec?.label || "";
+        const cat = getCategoryMeta(p);
+        const isSelected = p.id === currentId;
+
         const pillClass = lbl ? `pill-${lbl}` : "pill-none";
         const pillText = lbl === "1" ? "Confirmed" : lbl === "0" ? "False Pos" : lbl === "U" ? "Unclear" : "Unlabeled";
-        const color = lbl === "1" ? "#16a34a" : lbl === "0" ? "#dc2626" : lbl === "U" ? "#d97706" : "#38bdf8";
+
+        // Keep detection category as fillColor; encode validation status or selection on the ring stroke
+        const ringColor = isSelected ? "#facc15" : lbl === "1" ? "#16a34a" : lbl === "0" ? "#dc2626" : lbl === "U" ? "#d97706" : "#ffffff";
+        const ringWeight = isSelected ? 3.5 : lbl ? 3 : 1.5;
+        const fillOpacity = lbl === "0" ? 0.45 : 0.92;
 
         const marker = L.circleMarker([lat, lon], {
-          radius: p.id === currentId ? 9 : 6,
-          color: p.id === currentId ? "#facc15" : "#fff",
-          weight: p.id === currentId ? 2.5 : 1.5,
-          fillColor: color,
-          fillOpacity: 0.9
-        }).addTo(markersLayer);
+          radius: isSelected ? cat.radius + 3 : cat.radius,
+          color: ringColor,
+          weight: ringWeight,
+          fillColor: cat.color,
+          fillOpacity: fillOpacity
+        }).bindTooltip(
+          `<strong>${p.id} · ${cat.shortLabel}</strong><br/>Seen on ${p.passes_present}/${p.passes_observed} radar passes (${p.dates_present})<br/>Score: ${p.score.toFixed(2)} · Status: ${pillText}`,
+          { direction: "top", offset: [0, -6] }
+        ).addTo(markersLayer);
+
+        if (isSelected && marker.bringToFront) marker.bringToFront();
         marker.on("click", () => selectObject(p.id, true));
         markerById[p.id] = marker;
 
         const div = document.createElement("div");
-        div.className = `q-item ${p.id === currentId ? "active" : ""}`;
+        div.className = `q-item ${isSelected ? "active" : ""}`;
         div.innerHTML = `
           <div class="q-top">
-            <strong>${p.id} · ${p.score.toFixed(2)}</strong>
+            <strong><span class="q-cat-dot" style="background:${cat.color};"></span>${p.id} · ${cat.shortLabel}</strong>
             <span class="pill ${pillClass}">${pillText}</span>
           </div>
-          <div style="color:#475569;">${p.flag} · ${p.passes_present}/${p.passes_observed} passes</div>
-          <div style="color:#94a3b8;font-size:11px;">Assignee: ${p._assignees.join(", ")}</div>
+          <div style="color:#334155;font-weight:500;">Seen on ${p.passes_present} of ${p.passes_observed} radar passes · Score ${p.score.toFixed(2)}</div>
+          <div style="color:#64748b;font-size:11px;">Dates: ${p.dates_present} · Assignee: ${p._assignees.join(", ")}</div>
         `;
         div.onclick = () => selectObject(p.id, true);
         listEl.appendChild(div);
@@ -411,29 +708,52 @@
       const p = f.properties;
       const [lon, lat] = f.geometry.coordinates;
       const rec = labels[p.id] || {};
+      const cat = getCategoryMeta(p);
 
-      document.getElementById("objTitle").textContent = `${p.id} (Score ${p.score.toFixed(2)})`;
+      document.getElementById("objTitle").textContent = `${p.id} · ${cat.shortLabel}`;
       const pill = document.getElementById("objFlagPill");
-      pill.textContent = p.flag;
-      pill.className = `pill ${rec.label ? "pill-" + rec.label : "pill-none"}`;
+      pill.textContent = `Score ${p.score.toFixed(2)}`;
+      pill.style.background = cat.color;
+
+      const evBox = document.getElementById("plainEnglishEvidence");
+      evBox.className = `evidence-box ${cat.boxClass}`;
+      evBox.innerHTML = getPlainEnglishEvidence(p);
 
       document.getElementById("objMeta").innerHTML = `
-        <div class="kv-item"><span>Passes</span><strong>${p.passes_present} / ${p.passes_observed}</strong></div>
-        <div class="kv-item"><span>Date Range</span><strong>${p.first_seen} → ${p.last_seen}</strong></div>
-        <div class="kv-item"><span>Bridge Dist</span><strong>${p.dist_to_bridge_m} m</strong></div>
-        <div class="kv-item"><span>Bank Dist</span><strong>${p.dist_to_bank_m} m</strong></div>
-        <div class="kv-item"><span>Peak VV</span><strong>${p.peak_vv_db} dB</strong></div>
-        <div class="kv-item"><span>Est. Length</span><strong>${p.length_m} m</strong></div>
-        <div class="kv-item" style="grid-column:span 2;"><span>Dates Seen</span><strong>${p.dates_present}</strong></div>
+        <div class="kv-item"><span>Radar Persistence</span><strong>${p.passes_present} of ${p.passes_observed} passes</strong></div>
+        <div class="kv-item"><span>Date Window</span><strong>${p.first_seen} → ${p.last_seen}</strong></div>
+        <div class="kv-item"><span>Bridge Distance</span><strong>${p.dist_to_bridge_m} m ${p.in_zone ? "(In 1km Zone)" : ""}</strong></div>
+        <div class="kv-item"><span>Riverbank Distance</span><strong>${p.dist_to_bank_m} m</strong></div>
+        <div class="kv-item"><span>Est. Object Length</span><strong>~${p.length_m} m</strong></div>
+        <div class="kv-item"><span>Radar Return (VV)</span><strong>${p.peak_vv_db} dB</strong></div>
       `;
 
-      // External optical verification links
-      document.getElementById("copernicusLink").href =
-        `https://browser.dataspace.copernicus.eu/?zoom=15&lat=${lat}&lng=${lon}&datasetId=S2_L2A_CDAS&fromTime=${p.first_seen}T00:00:00.000Z&toTime=${p.last_seen}T23:59:59.999Z`;
-      document.getElementById("googleEarthLink").href =
-        `https://earth.google.com/web/@${lat},${lon},180a,1200d,35y,0h,0t,0r`;
-      document.getElementById("googleMapsLink").href =
-        `https://www.google.com/maps/@?api=1&map_action=map&center=${lat},${lon}&zoom=17&basemap=satellite`;
+      document.getElementById("opticalDatesText").textContent = p.dates_present;
+
+      // External optical verification links (padded ±3 days for Copernicus S2 5-day revisit)
+      const fromPadded = padIsoDate(p.first_seen, -3);
+      const toPadded = padIsoDate(p.last_seen, 3);
+      const planetUrl = `https://www.planet.com/explorer/#/center/${lon.toFixed(5)},${lat.toFixed(5)}/zoom/16`;
+      const copernicusUrl = `https://browser.dataspace.copernicus.eu/?zoom=16&lat=${lat}&lng=${lon}&datasetId=S2_L2A_CDAS&fromTime=${fromPadded}T00:00:00.000Z&toTime=${toPadded}T23:59:59.999Z`;
+      const earthUrl = `https://earth.google.com/web/@${lat},${lon},180a,1200d,35y,0h,0t,0r`;
+      const mapsUrl = `https://www.google.com/maps/@?api=1&map_action=map&center=${lat},${lon}&zoom=17&basemap=satellite`;
+
+      document.getElementById("planetLink").href = planetUrl;
+      document.getElementById("planetLinkTop").href = planetUrl;
+      document.getElementById("copernicusLink").href = copernicusUrl;
+      document.getElementById("copernicusLinkTop").href = copernicusUrl;
+      document.getElementById("googleEarthLink").href = earthUrl;
+      document.getElementById("googleEarthLinkTop").href = earthUrl;
+      document.getElementById("googleMapsLink").href = mapsUrl;
+      document.getElementById("googleMapsLinkTop").href = mapsUrl;
+
+      document.getElementById("copyCoordsBtn").onclick = () => {
+        const clipText = `${lat.toFixed(5)}, ${lon.toFixed(5)} | Dates: ${p.dates_present}`;
+        navigator.clipboard?.writeText(clipText);
+        const btn = document.getElementById("copyCoordsBtn");
+        btn.textContent = "Copied ✓";
+        setTimeout(() => { btn.textContent = "Copy Coords & Dates"; }, 1500);
+      };
 
       document.querySelectorAll(".lbl-btn").forEach(btn => {
         const l = btn.dataset.label;
@@ -484,6 +804,7 @@
       if (currentId && labels[currentId]) {
         labels[currentId].fp_reason = document.getElementById("fpReason").value;
         saveLabels();
+        pushRowToSheet(currentId);
       }
     };
     document.getElementById("notesInput").oninput = () => {
@@ -494,7 +815,13 @@
     };
     document.getElementById("prevBtn").onclick = () => step(-1);
     document.getElementById("nextBtn").onclick = () => step(1);
-    document.getElementById("annotatorSelect").onchange = renderQueue;
+    document.getElementById("annotatorSelect").onchange = (e) => {
+      if (e.target.value !== "All" && queueScope !== "ALL") {
+        setQueueScope("ALL");
+      } else {
+        renderQueue();
+      }
+    };
     document.getElementById("statusFilter").onchange = renderQueue;
 
     // Keyboard shortcuts
