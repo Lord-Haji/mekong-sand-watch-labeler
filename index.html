@@ -202,7 +202,7 @@
     <div class="steps-row">
       <div class="step-chip">
         <span class="step-num">1</span>
-        <span><strong>Pick a radar target:</strong> Start with the orange <strong>Stationary Hotspots (O007–O009)</strong>. Each dot is a bright Sentinel-1 radar reflection.</span>
+        <span><strong>Pick a radar target:</strong> Start with the orange <strong>Stationary Hotspots</strong>. Each dot is a persistent Sentinel-1 mid-river radar cluster.</span>
       </div>
       <div class="step-chip">
         <span class="step-num">2</span>
@@ -224,7 +224,7 @@
           <div>
             <label class="field-label" for="annotatorSelect">Annotator</label>
             <select id="annotatorSelect">
-              <option value="All">All Team (47)</option>
+              <option value="All" id="allTeamOpt">All Team</option>
               <option value="Tuna">Tuna</option>
               <option value="Tomas">Tomas</option>
               <option value="Lukas">Lukas</option>
@@ -246,9 +246,9 @@
         </div>
 
         <div class="scope-tabs" role="tablist" aria-label="Queue priority filter">
-          <button class="scope-tab active" data-scope="PRIORITY" id="scopePriorityBtn" title="Stationary hotspots + Inside 1 km bridge zone">Priority (9)</button>
-          <button class="scope-tab" data-scope="HOTSPOTS" id="scopeHotspotsBtn" title="Multi-pass stationary hotspots only (O007-O009)">Hotspots (3)</button>
-          <button class="scope-tab" data-scope="ALL" id="scopeAllBtn" title="All 47 radar detections including 1-pass passing boats">All (47)</button>
+          <button class="scope-tab active" data-scope="PRIORITY" id="scopePriorityBtn" title="Stationary hotspots + Inside 1 km bridge zone">Priority</button>
+          <button class="scope-tab" data-scope="HOTSPOTS" id="scopeHotspotsBtn" title="Multi-pass stationary hotspots only">Hotspots</button>
+          <button class="scope-tab" data-scope="ALL" id="scopeAllBtn" title="All radar detections">All</button>
         </div>
 
         <div class="progress-wrap">
@@ -281,26 +281,26 @@
         <div class="legend-body">
           <div class="legend-row">
             <span class="legend-dot" style="background:#f97316;width:13px;height:13px;"></span>
-            <span><strong>Stationary Hotspot (3)</strong> — 4–5 of 6 passes (check first!)</span>
+            <span id="legHotspot"><strong>Stationary Hotspot</strong> — persistent mid-river cluster (check first!)</span>
           </div>
-          <div class="legend-row">
+          <div class="legend-row" id="legZoneRow">
             <span class="legend-dot" style="background:#a855f7;"></span>
-            <span><strong>Inside 1 km Bridge Zone (6)</strong> — 1 pass inside restricted zone</span>
+            <span id="legZone"><strong>Inside 1 km Bridge Zone</strong> — detection inside restricted zone</span>
           </div>
-          <div class="legend-row">
+          <div class="legend-row" id="legPassingRow">
             <span class="legend-dot" style="background:#38bdf8;"></span>
-            <span><strong>Passing / Low-Persistence (35)</strong> — 1–2 passes outside zone</span>
+            <span id="legPassing"><strong>Passing / Low-Persistence</strong> — 1–2 passes outside zone</span>
           </div>
-          <div class="legend-row">
+          <div class="legend-row" id="legFixedRow">
             <span class="legend-dot" style="background:#94a3b8;"></span>
-            <span><strong>Fixed Structure (3)</strong> — very close to riverbank/pier</span>
+            <span id="legFixed"><strong>Fixed Structure</strong> — very close to riverbank/pier</span>
           </div>
-          <div class="legend-divider"></div>
-          <div class="legend-row">
+          <div class="legend-divider" id="legBridgeDivider"></div>
+          <div class="legend-row" id="legBridgeLineRow">
             <span class="legend-line-yellow"></span>
             <span><strong>Yellow Line:</strong> Thai–Lao Friendship Bridge</span>
           </div>
-          <div class="legend-row">
+          <div class="legend-row" id="legBridgeCircleRow">
             <span class="legend-circle-red"></span>
             <span><strong>Red Dashed Circle:</strong> 1 km Bridge No-Mining Zone</span>
           </div>
@@ -511,23 +511,56 @@
     let queueScope = "PRIORITY"; // PRIORITY (9) | HOTSPOTS (3) | ALL (47)
     let currentId = null;
 
-    // Map setup: Satellite + OSM
+    // Map setup: Satellite + OSM (auto-center on loaded features)
     const satLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
       maxZoom: 19, attribution: "Esri World Imagery (Reference Basemap)"
     });
     const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, attribution: "&copy; OpenStreetMap"
     });
-    const map = L.map("map", { center: [17.875, 102.715], zoom: 13, layers: [satLayer] });
+    const initialCenter = features.length
+      ? [features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]]
+      : [10.82, 105.18];
+    const map = L.map("map", { center: initialCenter, zoom: 13, layers: [satLayer] });
     L.control.layers({ "Satellite (Esri Reference)": satLayer, "OpenStreetMap": osmLayer }).addTo(map);
 
-    // Bridge & 1 km zone with tooltips
-    L.polyline([[17.87481, 102.71598], [17.88544, 102.71426]], { color: "#facc15", weight: 4 })
-      .bindTooltip("<strong>Thai–Lao Friendship Bridge</strong><br/>Reference infrastructure landmark", { sticky: true })
-      .addTo(map);
-    L.circle([17.880125, 102.71512], { radius: 1000, color: "#ef4444", weight: 1.8, dashArray: "6 4", fillOpacity: 0.04 })
-      .bindTooltip("<strong>1 km Bridge No-Mining Buffer Zone</strong><br/>Dredging near bridge piers risks scour &amp; structural damage", { sticky: true })
-      .addTo(map);
+    // Only draw Thai-Lao Friendship Bridge & 1 km zone if dataset is near Nong Khai or has in-zone items
+    const hasNongKhaiBridge = features.some(f => {
+      const [lon, lat] = f.geometry.coordinates;
+      const nearNK = Math.abs(lat - 17.88) < 0.25 && Math.abs(lon - 102.715) < 0.25;
+      return nearNK || (f.properties.flag || "").toLowerCase().includes("in zone");
+    });
+    if (hasNongKhaiBridge) {
+      L.polyline([[17.87481, 102.71598], [17.88544, 102.71426]], { color: "#facc15", weight: 4 })
+        .bindTooltip("<strong>Thai–Lao Friendship Bridge</strong><br/>Reference infrastructure landmark", { sticky: true })
+        .addTo(map);
+      L.circle([17.880125, 102.71512], { radius: 1000, color: "#ef4444", weight: 1.8, dashArray: "6 4", fillOpacity: 0.04 })
+        .bindTooltip("<strong>1 km Bridge No-Mining Buffer Zone</strong><br/>Dredging near bridge piers risks scour &amp; structural damage", { sticky: true })
+        .addTo(map);
+    } else {
+      ["legBridgeDivider", "legBridgeLineRow", "legBridgeCircleRow"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+      });
+    }
+
+    // Dynamic counts for scope tabs, annotator dropdown, and legend
+    const countHotspot = features.filter(f => getCategoryMeta(f.properties).tier === 0).length;
+    const countZone = features.filter(f => getCategoryMeta(f.properties).tier === 1).length;
+    const countPassing = features.filter(f => getCategoryMeta(f.properties).tier === 2).length;
+    const countFixed = features.filter(f => getCategoryMeta(f.properties).tier === 3).length;
+    const countPriority = countHotspot + countZone;
+    document.getElementById("allTeamOpt").textContent = `All Team (${features.length})`;
+    document.getElementById("scopePriorityBtn").textContent = `Priority (${countPriority})`;
+    document.getElementById("scopeHotspotsBtn").textContent = `Hotspots (${countHotspot})`;
+    document.getElementById("scopeAllBtn").textContent = `All (${features.length})`;
+    document.getElementById("legHotspot").innerHTML = `<strong>Stationary Hotspot (${countHotspot})</strong> — persistent mid-river cluster (check first!)`;
+    document.getElementById("legZone").innerHTML = `<strong>Inside 1 km Bridge Zone (${countZone})</strong> — detection inside restricted zone`;
+    document.getElementById("legPassing").innerHTML = `<strong>Passing / Low-Persistence (${countPassing})</strong> — 1–2 passes outside zone`;
+    document.getElementById("legFixed").innerHTML = `<strong>Fixed Structure (${countFixed})</strong> — very close to riverbank/pier`;
+    if (countZone === 0) document.getElementById("legZoneRow").style.display = "none";
+    if (countPassing === 0) document.getElementById("legPassingRow").style.display = "none";
+    if (countFixed === 0) document.getElementById("legFixedRow").style.display = "none";
 
     const markersLayer = L.layerGroup().addTo(map);
     const markerById = {};
@@ -719,10 +752,13 @@
       evBox.className = `evidence-box ${cat.boxClass}`;
       evBox.innerHTML = getPlainEnglishEvidence(p);
 
+      const thirdMetric = p.dist_to_bridge_m > 0
+        ? `<div class="kv-item"><span>Bridge Distance</span><strong>${p.dist_to_bridge_m} m ${p.in_zone ? "(In 1km Zone)" : ""}</strong></div>`
+        : `<div class="kv-item"><span>Cluster Footprint</span><strong>${p.pixel_count ? p.pixel_count + " px" : "—"}</strong></div>`;
       document.getElementById("objMeta").innerHTML = `
         <div class="kv-item"><span>Radar Persistence</span><strong>${p.passes_present} of ${p.passes_observed} passes</strong></div>
         <div class="kv-item"><span>Date Window</span><strong>${p.first_seen} → ${p.last_seen}</strong></div>
-        <div class="kv-item"><span>Bridge Distance</span><strong>${p.dist_to_bridge_m} m ${p.in_zone ? "(In 1km Zone)" : ""}</strong></div>
+        ${thirdMetric}
         <div class="kv-item"><span>Riverbank Distance</span><strong>${p.dist_to_bank_m} m</strong></div>
         <div class="kv-item"><span>Est. Object Length</span><strong>~${p.length_m} m</strong></div>
         <div class="kv-item"><span>Radar Return (VV)</span><strong>${p.peak_vv_db} dB</strong></div>
@@ -863,7 +899,12 @@
     };
 
     renderQueue();
-    if (currentId) selectObject(currentId, true);
+    if (features.length > 1) {
+      const bounds = L.latLngBounds(features.map(f => [f.geometry.coordinates[1], f.geometry.coordinates[0]]));
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    } else if (currentId) {
+      selectObject(currentId, true);
+    }
     pullFromSheet();
   </script>
 </body>
